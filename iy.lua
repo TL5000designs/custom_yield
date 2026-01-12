@@ -10110,23 +10110,34 @@ local function resolveReach(value)
 	return nil, nil
 end
 
+local function parseReachArgs(argList)
+	for i = 1, #argList do
+		local entry = argList[i]
+		if entry and entry ~= "" then
+			local lower = tostring(entry):lower()
+			if lower == "reset" or lower == "default" or lower == "normal" then
+				return "reset"
+			end
+			local size, label = resolveReach(entry)
+			if size then
+				return size, label
+			end
+		end
+	end
+	return nil, nil
+end
+
 addcmd('hitguard',{'nohit','hitblock'},function(args, speaker)
-	local input = args[1]
 	if not speaker then
 		return
 	end
-	if not input or input == "" then
-		execCmd('reach 60', speaker)
-		notify('Hit Guard', 'Reach set to 60 (default)')
-		return
-	end
-	local lowered = tostring(input):lower()
-	if lowered == "reset" or lowered == "default" or lowered == "normal" then
+	local payload = parseReachArgs(args)
+	if payload == "reset" then
 		execCmd('unreach', speaker)
 		notify('Hit Guard', 'Reach reset to normal')
 		return
 	end
-	local size, label = resolveReach(input)
+	local size, label = payload
 	if not size then
 		size = 60
 		label = "default"
