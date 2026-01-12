@@ -4295,7 +4295,7 @@ CMDs[#CMDs + 1] = {NAME = 'togglefullscreen / togglefs', DESC = 'Toggles fullscr
 CMDs[#CMDs + 1] = {NAME = 'notify [text]', DESC = 'Sends you a notification with the provided text'}
 CMDs[#CMDs + 1] = {NAME = 'lastcommand / lastcmd', DESC = 'Executes the previous command used'}
 CMDs[#CMDs + 1] = {NAME = 'exit', DESC = 'Kills roblox process'}
-CMDs[#CMDs + 1] = {NAME = 'hitguard / nohit / hitblock [player]', DESC = 'Prevents opponents from registering hits on the named player'}
+-- CMDs[#CMDs + 1] = {NAME = 'hitguard / nohit / hitblock [player]', DESC = 'Prevents opponents from registering hits on the named player'}
 CMDs[#CMDs + 1] = {NAME = '', DESC = ''}
 CMDs[#CMDs + 1] = {NAME = 'noclip', DESC = 'Go through objects'}
 CMDs[#CMDs + 1] = {NAME = 'unnoclip / clip', DESC = 'Disables noclip'}
