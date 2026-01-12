@@ -10142,7 +10142,7 @@ addcmd('hitguard',{'nohit','hitblock'},function(args, speaker)
 		size = 60
 		label = "default"
 	end
-	execCmd('reach ' .. size, speaker)
+	applyReachSize(speaker, size)
 	notify('Hit Guard', 'Reach set to ' .. (label or size))
 end)
 
@@ -11134,36 +11134,36 @@ end)
 
 local currentToolSize = ""
 local currentGripPos = ""
-addcmd('reach',{},function(args, speaker)
-	execCmd('unreach')
-	wait()
-	for i,v in pairs(speaker.Character:GetDescendants()) do
-		if v:IsA("Tool") then
-			if args[1] then
-				currentToolSize = v.Handle.Size
-				currentGripPos = v.GripPos
-				local a = Instance.new("SelectionBox")
-				a.Name = "SelectionBoxCreated"
-				a.Parent = v.Handle
-				a.Adornee = v.Handle
-				v.Handle.Massless = true
-				v.Handle.Size = Vector3.new(0.5,0.5,args[1])
-				v.GripPos = Vector3.new(0,0,0)
-				speaker.Character:FindFirstChildOfClass('Humanoid'):UnequipTools()
-			else
-				currentToolSize = v.Handle.Size
-				currentGripPos = v.GripPos
-				local a = Instance.new("SelectionBox")
-				a.Name = "SelectionBoxCreated"
-				a.Parent = v.Handle
-				a.Adornee = v.Handle
-				v.Handle.Massless = true
-				v.Handle.Size = Vector3.new(0.5,0.5,60)
-				v.GripPos = Vector3.new(0,0,0)
-				speaker.Character:FindFirstChildOfClass('Humanoid'):UnequipTools()
+
+local function applyReachSize(player, size)
+	if not player or not player.Character then
+		return
+	end
+	local humanoid = player.Character:FindFirstChildOfClass('Humanoid')
+	for _, tool in pairs(player.Character:GetDescendants()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
+			local handle = tool.Handle
+			currentToolSize = handle.Size
+			currentGripPos = tool.GripPos
+			local selection = Instance.new("SelectionBox")
+			selection.Name = "SelectionBoxCreated"
+			selection.Parent = handle
+			selection.Adornee = handle
+			handle.Massless = true
+			handle.Size = Vector3.new(0.5, 0.5, size)
+			tool.GripPos = Vector3.new(0, 0, 0)
+			if humanoid then
+				humanoid:UnequipTools()
 			end
 		end
 	end
+end
+
+addcmd('reach',{},function(args, speaker)
+	execCmd('unreach')
+	wait()
+	local size = tonumber(args[1]) or 60
+	applyReachSize(speaker, size)
 end)
 
 addcmd('unreach',{'noreach'},function(args, speaker)
