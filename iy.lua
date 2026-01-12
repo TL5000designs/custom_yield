@@ -4488,7 +4488,7 @@ CMDs[#CMDs + 1] = {NAME = 'bring [plr] (TOOL)', DESC = 'Brings a player (YOU NEE
 CMDs[#CMDs + 1] = {NAME = 'fastbring [plr] (TOOL)', DESC = 'Brings a player (less reliable) (YOU NEED A TOOL)'}
 CMDs[#CMDs + 1] = {NAME = 'teleport / tp [plr] [plr] (TOOL)', DESC = 'Teleports a player to another player (YOU NEED A TOOL)'}
 CMDs[#CMDs + 1] = {NAME = 'fastteleport / fasttp [plr] [plr] (TOOL)', DESC = 'Teleports a player to another player (less reliable) (YOU NEED A TOOL)'}
-CMDs[#CMDs + 1] = {NAME = 'hitguard / nohit / hitblock', DESC = 'Prevents the game from kicking you for being idle/afk'}
+CMDs[#CMDs + 1] = {NAME = 'hitguard / nohit / hitblock [size|preset]', DESC = 'Boosts your reach (reset/normal to restore)'}
 CMDs[#CMDs + 1] = {NAME = 'fling', DESC = 'Flings anyone you touch'}
 CMDs[#CMDs + 1] = {NAME = 'unfling', DESC = 'Disables the fling command'}
 CMDs[#CMDs + 1] = {NAME = 'invisfling', DESC = 'Enables invisible fling'}
@@ -10086,98 +10086,53 @@ addcmd('chat',{'say'},function(args, speaker)
 	ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(cString, "All")
 end)
 
-local hitboxCache = {}
-local HITBOX_PRESETS = {
-	tiny = 0.25,
-	small = 0.5,
-	normal = 1,
-	medium = 3,
-	big = 6,
-	huge = 10
+local REACH_PRESETS = {
+	tiny = 5,
+	small = 15,
+	normal = 30,
+	medium = 60,
+	big = 90,
+	huge = 130
 }
 
-local function getHumanoidRoot(player)
-	if not player then
+local function resolveReach(value)
+	if not value then
 		return nil
 	end
-	local char = player.Character
-	if not char then
-		return nil
+	local key = tostring(value):lower()
+	if REACH_PRESETS[key] then
+		return REACH_PRESETS[key], key
 	end
-	return char:FindFirstChild("HumanoidRootPart")
-end
-
-local function cacheHitbox(player, root)
-	if not player or not root then
-		return
-	end
-	if not hitboxCache[player] then
-		hitboxCache[player] = {
-			Size = root.Size,
-			Transparency = root.Transparency
-		}
-	end
-end
-
-local function resizeHitbox(root, size)
-	if not root then
-		return
-	end
-	root.Size = Vector3.new(size, size, size)
-	root.Transparency = 0.4
-end
-
-local function restoreHitbox(player)
-	local root = getHumanoidRoot(player)
-	local cached = hitboxCache[player]
-	if cached and root then
-		root.Size = cached.Size
-		root.Transparency = cached.Transparency
-	end
-	hitboxCache[player] = nil
-end
-
-local function resolveSize(arg)
-	if not arg then
-		return 6
-	end
-	local lower = tostring(arg):lower()
-	if HITBOX_PRESETS[lower] then
-		return HITBOX_PRESETS[lower]
-	end
-	local num = tonumber(arg)
+	local num = tonumber(value)
 	if num and num > 0 then
-		return num
+		return num, "custom"
 	end
-	return nil
+	return nil, nil
 end
 
 addcmd('hitguard',{'nohit','hitblock'},function(args, speaker)
-	local option = tostring(args[2] or ""):lower()
-	local players = getPlayer(args[1], speaker)
-	for _, name in ipairs(players) do
-		local player = Players[name]
-		if not player then
-			continue
-		end
-		if option == "reset" or option == "default" then
-			restoreHitbox(player)
-			notify('Hit Guard', player.Name .. ' hitbox restored')
-			continue
-		end
-		local size = resolveSize(option)
-		if not size then
-			size = 6
-		end
-		local root = getHumanoidRoot(player)
-		if not root then
-			notify('Hit Guard', 'Could not find HumanoidRootPart for ' .. player.Name)
-			continue
-		end
-		cacheHitbox(player, root)
-		resizeHitbox(root, size)
-		notify('Hit Guard', player.Name .. "'s hitbox set to " .. size)
+	local input = args[1]
+	if not speaker then
+		return
 	end
+	if not input or input == "" then
+		execCmd('reach 60', speaker)
+		notify('Hit Guard', 'Reach set to 60 (default)')
+		return
+	end
+	local lowered = tostring(input):lower()
+	if lowered == "reset" or lowered == "default" or lowered == "normal" then
+		execCmd('unreach', speaker)
+		notify('Hit Guard', 'Reach reset to normal')
+		return
+	end
+	local size, label = resolveReach(input)
+	if not size then
+		size = 60
+		label = "default"
+	end
+	execCmd('reach ' .. size, speaker)
+	notify('Hit Guard', 'Reach set to ' .. (label or size))
 end)
 
 
