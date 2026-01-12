@@ -10086,71 +10086,97 @@ addcmd('chat',{'say'},function(args, speaker)
 	ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(cString, "All")
 end)
 
-local hitGuardRegistry = {}
+local hitboxCache = {}
+local HITBOX_PRESETS = {
+	tiny = 0.25,
+	small = 0.5,
+	normal = 1,
+	medium = 3,
+	big = 6,
+	huge = 10
+}
 
-local function cleanupHitGuard(target)
-	local guard = hitGuardRegistry[target]
-	if guard then
-		if guard.conn then
-			guard.conn:Disconnect()
-		end
-		if guard.died then
-			guard.died:Disconnect()
-		end
-		hitGuardRegistry[target] = nil
-		return true
+local function getHumanoidRoot(player)
+	if not player then
+		return nil
 	end
-	return false
+	local char = player.Character
+	if not char then
+		return nil
+	end
+	return char:FindFirstChild("HumanoidRootPart")
 end
 
-local function enableHitGuard(target)
-	if not target then
-		return false
+local function cacheHitbox(player, root)
+	if not player or not root then
+		return
 	end
-	local char = target.Character
-	if not char then
-		return false
+	if not hitboxCache[player] then
+		hitboxCache[player] = {
+			Size = root.Size,
+			Transparency = root.Transparency
+		}
 	end
-	local humanoid = char:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return false
+end
+
+local function resizeHitbox(root, size)
+	if not root then
+		return
 	end
+	root.Size = Vector3.new(size, size, size)
+	root.Transparency = 0.4
+end
 
-	cleanupHitGuard(target)
+local function restoreHitbox(player)
+	local root = getHumanoidRoot(player)
+	local cached = hitboxCache[player]
+	if cached and root then
+		root.Size = cached.Size
+		root.Transparency = cached.Transparency
+	end
+	hitboxCache[player] = nil
+end
 
-	local guard = {lastHealth = humanoid.Health}
-	guard.conn = humanoid.HealthChanged:Connect(function(newHealth)
-		if newHealth < guard.lastHealth then
-			humanoid.Health = guard.lastHealth
-		else
-			guard.lastHealth = newHealth
-		end
-	end)
-
-	guard.died = humanoid.Died:Connect(function()
-		cleanupHitGuard(target)
-	end)
-
-	hitGuardRegistry[target] = guard
-	return true
+local function resolveSize(arg)
+	if not arg then
+		return 6
+	end
+	local lower = tostring(arg):lower()
+	if HITBOX_PRESETS[lower] then
+		return HITBOX_PRESETS[lower]
+	end
+	local num = tonumber(arg)
+	if num and num > 0 then
+		return num
+	end
+	return nil
 end
 
 addcmd('hitguard',{'nohit','hitblock'},function(args, speaker)
+	local option = tostring(args[2] or ""):lower()
 	local players = getPlayer(args[1], speaker)
 	for _, name in ipairs(players) do
 		local player = Players[name]
-		if player then
-			if hitGuardRegistry[player] then
-				cleanupHitGuard(player)
-				notify('Hit Guard', player.Name .. ' registers hits normally again')
-			else
-				if enableHitGuard(player) then
-					notify('Hit Guard', player.Name .. ' no  longer registers hits from opponents')
-				else
-					notify('Hit Guard', 'Could not protect ' .. player.Name)
-				end
-			end
+		if not player then
+			continue
 		end
+		if option == "reset" or option == "default" then
+			restoreHitbox(player)
+			notify('Hit Guard', player.Name .. ' hitbox restored')
+			continue
+		end
+		local size = resolveSize(option)
+		if not size then
+			size = 6
+		end
+		local root = getHumanoidRoot(player)
+		if not root then
+			notify('Hit Guard', 'Could not find HumanoidRootPart for ' .. player.Name)
+			continue
+		end
+		cacheHitbox(player, root)
+		resizeHitbox(root, size)
+		notify('Hit Guard', player.Name .. "'s hitbox set to " .. size)
 	end
 end)
 
